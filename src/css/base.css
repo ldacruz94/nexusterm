@@ -20,6 +20,10 @@ html {
   overflow: hidden;
 }
 
+html.maximized {
+  border-radius: 0;
+}
+
 body {
   height: 100%;
   display: flex;

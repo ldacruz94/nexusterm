@@ -3,7 +3,11 @@ import { fitAll } from './panel.js';
 
 export const appWindow = getCurrentWindow();
 
-export function initWindowControls() {
+async function syncMaximized() {
+  document.documentElement.classList.toggle('maximized', await appWindow.isMaximized());
+}
+
+export async function initWindowControls() {
   document.getElementById('btn-minimize').addEventListener('click', () => appWindow.minimize());
   document.getElementById('btn-maximize').addEventListener('click', () => appWindow.toggleMaximize());
   document.getElementById('btn-close').addEventListener('click', () => appWindow.close());
@@ -11,6 +15,9 @@ export function initWindowControls() {
   document.getElementById('titlebar').addEventListener('mousedown', (e) => {
     if (e.button === 0 && !e.target.closest('button')) appWindow.startDragging();
   });
+
+  await appWindow.onResized(syncMaximized);
+  await syncMaximized(); // set correct state on launch
 }
 
 export function initSidebarResize() {

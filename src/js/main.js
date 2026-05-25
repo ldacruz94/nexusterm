@@ -25,7 +25,7 @@ document.getElementById('btn-help').addEventListener('click', showShortcuts);
 document.getElementById('btn-shortcuts-close').addEventListener('click', hideShortcuts);
 document.getElementById('btn-new-session').addEventListener('click', () => createSession());
 
-initWindowControls();
+await initWindowControls();
 initSidebarResize();
 
 new ResizeObserver(fitAll).observe(document.getElementById('main'));
