@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { setActive, fitAll } from './panel.js';
 import { createPanel } from './terminal.js';
+import { saveState } from './persist.js';
 
 export function renderSessionItem(sessionId) {
   const session = state.sessions.get(sessionId);
@@ -44,7 +45,7 @@ export function startRename(sessionId, item, nameEl) {
 
   const finish = (save) => {
     const trimmed = input.value.trim();
-    if (save && trimmed) session.name = trimmed;
+    if (save && trimmed) { session.name = trimmed; saveState(); }
     nameEl.textContent = session.name;
     item.replaceChild(nameEl, input);
   };
@@ -91,4 +92,5 @@ export async function createSession(name) {
 
   await switchSession(id);
   await createPanel(el, id);
+  saveState();
 }

@@ -4,6 +4,7 @@ import { fitAll, splitActive, closePanel } from './panel.js';
 import { createSession } from './sessions.js';
 import { showShortcuts, hideShortcuts } from './shortcuts.js';
 import { appWindow, initWindowControls, initSidebarResize } from './window.js';
+import { saveState, loadState } from './persist.js';
 
 await listen('pty-output', (event) => {
   state.panels.get(event.payload.id)?.term.write(event.payload.data);
@@ -30,4 +31,7 @@ initSidebarResize();
 
 new ResizeObserver(fitAll).observe(document.getElementById('main'));
 
-await createSession('Session 1');
+window.addEventListener('beforeunload', saveState);
+
+const restored = await loadState();
+if (!restored) await createSession('Session 1');

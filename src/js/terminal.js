@@ -1,6 +1,7 @@
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
+import { SerializeAddon } from '@xterm/addon-serialize';
 import '@xterm/xterm/css/xterm.css';
 import { invoke } from '@tauri-apps/api/core';
 import { state } from './state.js';
@@ -69,9 +70,11 @@ export async function createPanel(container, sessionId) {
   el.addEventListener('mousedown', () => setActive(id));
   container.appendChild(el);
 
-  const term     = new Terminal(TERM_OPTIONS);
-  const fitAddon = new FitAddon();
+  const term          = new Terminal(TERM_OPTIONS);
+  const fitAddon      = new FitAddon();
+  const serializeAddon = new SerializeAddon();
   term.loadAddon(fitAddon);
+  term.loadAddon(serializeAddon);
   term.loadAddon(new WebLinksAddon());
   term.open(termEl);
 
@@ -115,7 +118,7 @@ export async function createPanel(container, sessionId) {
   term.onData((data) => invoke('write_to_pty', { id, data }));
   term.onResize(({ rows, cols }) => invoke('resize_pty', { id, rows, cols }));
 
-  state.panels.set(id, { term, fitAddon, el, sessionId });
+  state.panels.set(id, { term, fitAddon, serializeAddon, el, sessionId });
   initPanelDrag(el);
   fitAll();
 

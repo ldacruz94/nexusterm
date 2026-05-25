@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { state } from './state.js';
 import { createPanel } from './terminal.js';
+import { saveState } from './persist.js';
 
 export function setActive(id) {
   document.querySelectorAll('.panel').forEach((el) => el.classList.remove('active'));
@@ -187,6 +188,7 @@ export async function splitActive(direction) {
 
   fitAll();
   await createPanel(splitEl, sessionId);
+  saveState();
 }
 
 export async function closePanel(id, { force = false } = {}) {
@@ -223,4 +225,5 @@ export async function closePanel(id, { force = false } = {}) {
   }
 
   fitAll();
+  if (!force) saveState(); // force = shell exited, nothing meaningful to save
 }
