@@ -1,0 +1,32 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #1a1b26;
+  --bg-alt: #16161e;
+  --border: #29293d;
+  --accent: #7aa2f7;
+  --text: #c0caf5;
+  --text-dim: #565f89;
+  --sidebar-w: 180px;
+}
+
+html {
+  height: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+body {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, sans-serif;
+  overflow: hidden;
+  border-radius: inherit;
+}

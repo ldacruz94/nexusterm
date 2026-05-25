@@ -1,0 +1,30 @@
+# Rust build output
+/src-tauri/target/
+
+# Node
+node_modules/
+dist/
+
+# Vite
+*.local
+
+# Tauri generated files (auto-created at build time)
+/src-tauri/gen/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code session files
+.claude/

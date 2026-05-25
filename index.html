@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NexusTerm</title>
+    <link rel="stylesheet" href="/src/css/style.css" />
+  </head>
+  <body>
+    <div id="titlebar">
+      <span class="brand">Nexus<span class="brand-accent">Term</span></span>
+      <div class="titlebar-actions">
+        <button id="btn-split-h" title="Split right (Ctrl+Shift+D)">&#124; Split</button>
+        <button id="btn-split-v" title="Split down (Ctrl+Shift+E)">— Split</button>
+        <button id="btn-help" title="Shortcuts (Ctrl+/)">?</button>
+      </div>
+      <div class="window-controls">
+        <button id="btn-minimize" title="Minimize">&#8212;</button>
+        <button id="btn-maximize" title="Maximize">&#9633;</button>
+        <button id="btn-close"    title="Close">&#xd7;</button>
+      </div>
+    </div>
+
+    <div id="app">
+      <div id="sidebar">
+        <div class="sidebar-header">
+          <span>Sessions</span>
+          <button id="btn-new-session" title="New session">+</button>
+        </div>
+        <div id="session-list"></div>
+      </div>
+      <div id="sidebar-resizer"></div>
+      <div id="main"></div>
+    </div>
+
+    <dialog id="shortcuts-dialog">
+      <div class="sd-header">
+        <span class="sd-title">Keyboard Shortcuts</span>
+        <button id="btn-shortcuts-close">×</button>
+      </div>
+      <div class="sd-body">
+        <table class="shortcuts-table">
+          <tbody>
+            <tr class="group-label"><td colspan="2">Panels</td></tr>
+            <tr><td>Split right</td>       <td><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>D</kbd></td></tr>
+            <tr><td>Split down</td>        <td><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd></td></tr>
+            <tr><td>Close panel</td>       <td><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>W</kbd></td></tr>
+
+            <tr class="group-label"><td colspan="2">Focus</td></tr>
+            <tr><td>Focus up</td>          <td><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>↑</kbd></td></tr>
+            <tr><td>Focus down</td>        <td><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>↓</kbd></td></tr>
+            <tr><td>Focus left</td>        <td><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>←</kbd></td></tr>
+            <tr><td>Focus right</td>       <td><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>→</kbd></td></tr>
+
+            <tr class="group-label"><td colspan="2">Clipboard</td></tr>
+            <tr><td>Copy (with selection)</td> <td><kbd>Ctrl</kbd><kbd>C</kbd></td></tr>
+            <tr><td>Paste</td>                 <td><kbd>Ctrl</kbd><kbd>V</kbd></td></tr>
+            <tr><td>Select all</td>            <td><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>A</kbd></td></tr>
+
+            <tr class="group-label"><td colspan="2">Sessions</td></tr>
+            <tr><td>New session</td>       <td><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>S</kbd></td></tr>
+            <tr><td>Rename session</td>    <td>Double-click name</td></tr>
+
+            <tr class="group-label"><td colspan="2">General</td></tr>
+            <tr><td>Show shortcuts</td>    <td><kbd>Ctrl</kbd><kbd>/</kbd></td></tr>
+            <tr><td>Close this dialog</td> <td><kbd>Esc</kbd></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </dialog>
+
+    <script type="module" src="/src/js/main.js"></script>
+  </body>
+</html>
