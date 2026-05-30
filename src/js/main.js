@@ -1,22 +1,30 @@
 import { listen } from '@tauri-apps/api/event';
 import { state } from './state.js';
-import { fitAll, splitActive, closePanel } from './panel.js';
+import { fitAll, splitActive, closePanel, closeTab } from './panel.js';
 import { createSession } from './sessions.js';
 import { showShortcuts, hideShortcuts } from './shortcuts.js';
 import { appWindow, initWindowControls, initSidebarResize } from './window.js';
 import { saveState, loadState } from './persist.js';
 
 await listen('pty-output', (event) => {
-  state.panels.get(event.payload.id)?.term.write(event.payload.data);
+  const { id, data } = event.payload;
+  for (const panel of state.panels.values()) {
+    const tab = panel.tabs.get(id);
+    if (tab) { tab.term.write(data); return; }
+  }
 });
 
 await listen('pty-exited', (event) => {
-  const id = event.payload;
-  if (!state.panels.has(id)) return;
-  if (state.panels.size === 1) {
-    appWindow.close();
-  } else {
-    closePanel(id, { force: true });
+  const tabId = event.payload;
+  for (const [panelId, panel] of state.panels) {
+    if (!panel.tabs.has(tabId)) continue;
+    const totalTabs = [...state.panels.values()].reduce((n, p) => n + p.tabs.size, 0);
+    if (totalTabs === 1) {
+      appWindow.close();
+    } else {
+      closeTab(panelId, tabId, { force: true });
+    }
+    return;
   }
 });
 

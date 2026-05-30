@@ -1,6 +1,6 @@
 import { state } from './state.js';
-import { makeSplitter } from './panel.js';
-import { createPanel } from './terminal.js';
+import { makeSplitter, setActiveTab } from './panel.js';
+import { createPanel, addPanelTab } from './terminal.js';
 import { renderSessionItem, switchSession } from './sessions.js';
 
 const STORAGE_KEY = 'nexusterm-state';
@@ -10,11 +10,13 @@ const STORAGE_KEY = 'nexusterm-state';
 function serializeNode(el) {
   if (el.classList.contains('panel')) {
     const panelData = [...state.panels.values()].find((p) => p.el === el);
-    return {
-      type: 'panel',
-      flex: el.style.flex,
-      scrollback: panelData?.serializeAddon?.serialize() ?? '',
-    };
+    const tabs = panelData
+      ? [...panelData.tabs.values()].map((t) => ({ scrollback: t.serializeAddon?.serialize() ?? '' }))
+      : [{ scrollback: '' }];
+    const activeTabIdx = panelData
+      ? Math.max(0, [...panelData.tabs.keys()].indexOf(panelData.activeTabId))
+      : 0;
+    return { type: 'panel', flex: el.style.flex, tabs, activeTabIdx };
   }
   const type = el.classList.contains('split-h') ? 'split-h' : 'split-v';
   const children = [...el.children]
@@ -52,7 +54,7 @@ export function saveState() {
 
 function stripScrollback(node) {
   if (!node) return node;
-  if (node.type === 'panel') return { ...node, scrollback: '' };
+  if (node.type === 'panel') return { ...node, tabs: node.tabs?.map((t) => ({ ...t, scrollback: '' })) };
   return { ...node, children: node.children.map(stripScrollback) };
 }
 
@@ -61,9 +63,27 @@ function stripScrollback(node) {
 async function restoreNode(node, container, sessionId) {
   if (node.type === 'panel') {
     const panelId = await createPanel(container, sessionId);
-    const panel = state.panels.get(panelId);
-    if (node.flex)      panel.el.style.flex = node.flex;
-    if (node.scrollback) panel.term.write(node.scrollback);
+    const panel   = state.panels.get(panelId);
+    if (node.flex) panel.el.style.flex = node.flex;
+
+    // Support both new format (tabs array) and old format (scrollback at root)
+    const tabs = node.tabs ?? [{ scrollback: node.scrollback ?? '' }];
+
+    // First tab already created by createPanel — restore its scrollback
+    const firstTabId = [...panel.tabs.keys()][0];
+    if (firstTabId && tabs[0]?.scrollback) panel.tabs.get(firstTabId).term.write(tabs[0].scrollback);
+
+    // Create additional tabs
+    for (let i = 1; i < tabs.length; i++) {
+      await addPanelTab(panelId, { scrollback: tabs[i]?.scrollback });
+    }
+
+    // Restore active tab
+    const tabIds     = [...panel.tabs.keys()];
+    const activeTabId = tabIds[node.activeTabIdx ?? 0];
+    if (activeTabId) setActiveTab(panelId, activeTabId);
+
+    return;
   } else {
     const splitEl = document.createElement('div');
     splitEl.className = node.type;

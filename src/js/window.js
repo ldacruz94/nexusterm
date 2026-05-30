@@ -9,14 +9,25 @@ async function syncMaximized() {
 
 export async function initWindowControls() {
   document.getElementById('btn-minimize').addEventListener('click', () => appWindow.minimize());
-  document.getElementById('btn-maximize').addEventListener('click', () => appWindow.toggleMaximize());
+  document.getElementById('btn-maximize').addEventListener('click', async () => {
+    document.body.classList.add('maximizing');
+    await appWindow.toggleMaximize();
+  });
   document.getElementById('btn-close').addEventListener('click', () => appWindow.close());
 
   document.getElementById('titlebar').addEventListener('mousedown', (e) => {
     if (e.button === 0 && !e.target.closest('button')) appWindow.startDragging();
   });
 
-  await appWindow.onResized(syncMaximized);
+  let fitDebounce;
+  await appWindow.onResized(async () => {
+    await syncMaximized();
+    clearTimeout(fitDebounce);
+    fitDebounce = setTimeout(() => {
+      fitAll();
+      document.body.classList.remove('maximizing');
+    }, 150);
+  });
   await syncMaximized(); // set correct state on launch
 }
 

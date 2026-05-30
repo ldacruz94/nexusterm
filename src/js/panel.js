@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { state } from './state.js';
-import { createPanel } from './terminal.js';
+import { createPanel, addPanelTab } from './terminal.js';
 import { saveState } from './persist.js';
 
 export function setActive(id) {
@@ -8,10 +8,27 @@ export function setActive(id) {
   const panel = state.panels.get(id);
   if (!panel) return;
   panel.el.classList.add('active');
-  panel.term.focus();
+  panel.term?.focus();
   state.activeId = id;
   const session = state.sessions.get(panel.sessionId);
   if (session) session.activePanelId = id;
+}
+
+export function setActiveTab(panelId, tabId) {
+  const panel = state.panels.get(panelId);
+  if (!panel) return;
+
+  for (const [, tab] of panel.tabs) {
+    tab.termEl.style.display = 'none';
+    tab.tabEl.classList.remove('active');
+  }
+
+  const tab = panel.tabs.get(tabId);
+  if (!tab) return;
+  tab.termEl.style.display = '';
+  tab.tabEl.classList.add('active');
+  panel.activeTabId = tabId;
+  tab.fitAddon.fit();
 }
 
 export function focusDirection(direction) {
@@ -47,7 +64,7 @@ export function focusDirection(direction) {
 
 export function fitAll() {
   for (const [, panel] of state.panels) {
-    if (panel.sessionId === state.activeSessionId) panel.fitAddon.fit();
+    if (panel.sessionId === state.activeSessionId) panel.fitAddon?.fit();
   }
 }
 
@@ -191,6 +208,36 @@ export async function splitActive(direction) {
   saveState();
 }
 
+export async function closeTab(panelId, tabId, { force = false } = {}) {
+  const panel = state.panels.get(panelId);
+  if (!panel) return;
+
+  const tab = panel.tabs.get(tabId);
+  if (!tab) return;
+
+  // Last tab — close the whole pane instead
+  if (panel.tabs.size === 1) {
+    await closePanel(panelId, { force });
+    return;
+  }
+
+  // Switch to an adjacent tab before removing
+  if (panel.activeTabId === tabId) {
+    const ids  = [...panel.tabs.keys()];
+    const idx  = ids.indexOf(tabId);
+    const next = ids[idx + 1] ?? ids[idx - 1];
+    setActiveTab(panelId, next);
+  }
+
+  tab.term.dispose();
+  tab.termEl.remove();
+  tab.tabEl.remove();
+  panel.tabs.delete(tabId);
+  invoke('kill_pty', { id: tabId }).catch(() => {});
+
+  if (!force) saveState();
+}
+
 export async function closePanel(id, { force = false } = {}) {
   const panel = state.panels.get(id);
   if (!panel) return;
@@ -201,9 +248,12 @@ export async function closePanel(id, { force = false } = {}) {
   const { el } = panel;
   const parent = el.parentElement;
 
-  panel.term.dispose();
+  // Dispose every tab in this pane
+  for (const [tabId, tab] of panel.tabs) {
+    tab.term.dispose();
+    invoke('kill_pty', { id: tabId }).catch(() => {});
+  }
   state.panels.delete(id);
-  invoke('kill_pty', { id }).catch(() => {});
 
   const prevSib = el.previousElementSibling;
   const nextSib = el.nextElementSibling;
@@ -225,5 +275,5 @@ export async function closePanel(id, { force = false } = {}) {
   }
 
   fitAll();
-  if (!force) saveState(); // force = shell exited, nothing meaningful to save
+  if (!force) saveState();
 }

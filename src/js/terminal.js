@@ -5,7 +5,7 @@ import { SerializeAddon } from '@xterm/addon-serialize';
 import '@xterm/xterm/css/xterm.css';
 import { invoke } from '@tauri-apps/api/core';
 import { state } from './state.js';
-import { setActive, fitAll, initPanelDrag, splitActive, closePanel, focusDirection } from './panel.js';
+import { setActive, fitAll, initPanelDrag, splitActive, closePanel, focusDirection, setActiveTab, closeTab } from './panel.js';
 import { showShortcuts } from './shortcuts.js';
 import { createSession } from './sessions.js';
 
@@ -39,37 +39,38 @@ const TERM_OPTIONS = {
   },
 };
 
-export async function createPanel(container, sessionId) {
-  const id = `pty-${++state.panelCounter}`;
+export async function addPanelTab(panelId, opts = {}) {
+  const panel = state.panels.get(panelId);
+  if (!panel) return null;
 
-  const el = document.createElement('div');
-  el.className = 'panel';
+  const tabId = `pty-${++state.panelCounter}`;
 
+  // Tab button
+  const tabEl = document.createElement('button');
+  tabEl.className = 'panel-tab';
+
+  const tabTitle = document.createElement('span');
+  tabTitle.className = 'panel-tab-name';
+  tabTitle.textContent = 'bash';
+  tabEl.appendChild(tabTitle);
+
+  const tabClose = document.createElement('button');
+  tabClose.className = 'panel-tab-close';
+  tabClose.textContent = '×';
+  tabClose.addEventListener('click', (e) => { e.stopPropagation(); closeTab(panelId, tabId); });
+  tabEl.appendChild(tabClose);
+
+  tabEl.addEventListener('click', () => { setActiveTab(panelId, tabId); setActive(panelId); });
+
+  panel.tabsListEl.appendChild(tabEl);
+
+  // Terminal container (hidden until active)
   const termEl = document.createElement('div');
   termEl.className = 'panel-terminal';
-  el.appendChild(termEl);
+  termEl.style.display = 'none';
+  panel.contentEl.appendChild(termEl);
 
-  const topRight = document.createElement('div');
-  topRight.className = 'panel-top-right';
-
-  const dragHandle = document.createElement('div');
-  dragHandle.className = 'panel-drag-handle';
-  dragHandle.textContent = '⠿';
-  dragHandle.title = 'Drag to swap';
-  topRight.appendChild(dragHandle);
-
-  const closeBtn = document.createElement('button');
-  closeBtn.className = 'panel-close';
-  closeBtn.textContent = '×';
-  closeBtn.title = 'Close panel (Ctrl+Shift+W)';
-  closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closePanel(id); });
-  topRight.appendChild(closeBtn);
-
-  el.appendChild(topRight);
-
-  el.addEventListener('mousedown', () => setActive(id));
-  container.appendChild(el);
-
+  // Terminal instance
   const term          = new Terminal(TERM_OPTIONS);
   const fitAddon      = new FitAddon();
   const serializeAddon = new SerializeAddon();
@@ -77,6 +78,8 @@ export async function createPanel(container, sessionId) {
   term.loadAddon(serializeAddon);
   term.loadAddon(new WebLinksAddon());
   term.open(termEl);
+
+  term.onTitleChange((title) => { if (title) tabTitle.textContent = title; });
 
   termEl.addEventListener('paste', (e) => {
     const text = e.clipboardData?.getData('text/plain');
@@ -91,40 +94,110 @@ export async function createPanel(container, sessionId) {
       return false;
     }
     if (!e.ctrlKey && !e.altKey && e.shiftKey && e.key === 'Enter') {
-      invoke('write_to_pty', { id, data: '\n' });
+      invoke('write_to_pty', { id: tabId, data: '\n' });
       return false;
     }
     if (e.ctrlKey && !e.shiftKey && e.key === 'c') {
       const sel = term.getSelection();
       if (sel) { navigator.clipboard.writeText(sel); return false; }
-      return true; // no selection → send ^C (SIGINT) to shell
+      return true;
     }
     if (e.ctrlKey && e.shiftKey) {
       switch (e.key) {
-        case 'D':          splitActive('horizontal');  return false;
-        case 'E':          splitActive('vertical');    return false;
-        case 'W':          closePanel(id);             return false;
-        case 'S':          createSession();            return false;
-        case 'A':          term.selectAll();           return false;
-        case 'ArrowUp':    focusDirection('up');       return false;
-        case 'ArrowDown':  focusDirection('down');     return false;
-        case 'ArrowRight': focusDirection('right');    return false;
-        case 'ArrowLeft':  focusDirection('left');     return false;
+        case 'D':          splitActive('horizontal');        return false;
+        case 'E':          splitActive('vertical');          return false;
+        case 'T':          addPanelTab(panelId);             return false;
+        case 'W':          closeTab(panelId, tabId);         return false;
+        case 'S':          createSession();                  return false;
+        case 'A':          term.selectAll();                 return false;
+        case 'ArrowUp':    focusDirection('up');             return false;
+        case 'ArrowDown':  focusDirection('down');           return false;
+        case 'ArrowRight': focusDirection('right');          return false;
+        case 'ArrowLeft':  focusDirection('left');           return false;
       }
     }
     return true;
   });
 
-  term.onData((data) => invoke('write_to_pty', { id, data }));
-  term.onResize(({ rows, cols }) => invoke('resize_pty', { id, rows, cols }));
+  term.onData((data) => invoke('write_to_pty', { id: tabId, data }));
+  term.onResize(({ rows, cols }) => invoke('resize_pty', { id: tabId, rows, cols }));
 
-  state.panels.set(id, { term, fitAddon, serializeAddon, el, sessionId });
-  initPanelDrag(el);
-  fitAll();
+  panel.tabs.set(tabId, { term, fitAddon, serializeAddon, termEl, tabEl });
 
-  await invoke('create_pty', { id, rows: term.rows, cols: term.cols })
+  setActiveTab(panelId, tabId);
+
+  if (opts.scrollback) term.write(opts.scrollback);
+
+  await invoke('create_pty', { id: tabId, rows: term.rows, cols: term.cols })
     .catch((err) => term.writeln(`\x1b[31mFailed to start shell: ${err}\x1b[0m`));
 
-  setActive(id);
-  return id;
+  return tabId;
+}
+
+export async function createPanel(container, sessionId) {
+  const panelId = `panel-${++state.panelCounter}`;
+
+  const el = document.createElement('div');
+  el.className = 'panel';
+
+  // ── Tabbar ──────────────────────────────────────────────────────────────
+  const tabbar = document.createElement('div');
+  tabbar.className = 'panel-tabbar';
+
+  const tabsList = document.createElement('div');
+  tabsList.className = 'panel-tabs';
+  tabbar.appendChild(tabsList);
+
+  const actions = document.createElement('div');
+  actions.className = 'panel-tabbar-actions';
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'panel-tab-add';
+  addBtn.title = 'New tab (Ctrl+Shift+T)';
+  addBtn.textContent = '+';
+  addBtn.addEventListener('click', (e) => { e.stopPropagation(); addPanelTab(panelId); });
+  actions.appendChild(addBtn);
+
+  const dragHandle = document.createElement('div');
+  dragHandle.className = 'panel-drag-handle';
+  dragHandle.textContent = '⠿';
+  dragHandle.title = 'Drag to swap';
+  actions.appendChild(dragHandle);
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'panel-close';
+  closeBtn.textContent = '×';
+  closeBtn.title = 'Close pane';
+  closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closePanel(panelId); });
+  actions.appendChild(closeBtn);
+
+  tabbar.appendChild(actions);
+  el.appendChild(tabbar);
+
+  // ── Content area ─────────────────────────────────────────────────────────
+  const contentEl = document.createElement('div');
+  contentEl.className = 'panel-content';
+  el.appendChild(contentEl);
+
+  el.addEventListener('mousedown', () => setActive(panelId));
+  container.appendChild(el);
+
+  state.panels.set(panelId, {
+    el,
+    sessionId,
+    tabs:        new Map(),
+    activeTabId: null,
+    contentEl,
+    tabsListEl:  tabsList,
+    get fitAddon()      { return this.tabs.get(this.activeTabId)?.fitAddon; },
+    get serializeAddon(){ return this.tabs.get(this.activeTabId)?.serializeAddon; },
+    get term()          { return this.tabs.get(this.activeTabId)?.term; },
+  });
+
+  initPanelDrag(el);
+  await addPanelTab(panelId);
+
+  fitAll();
+  setActive(panelId);
+  return panelId;
 }
