@@ -39,7 +39,7 @@ const TERM_OPTIONS = {
   },
 };
 
-export async function addPanelTab(panelId, opts = {}) {
+export async function addPanelTab(panelId) {
   const panel = state.panels.get(panelId);
   if (!panel) return null;
 
@@ -125,8 +125,6 @@ export async function addPanelTab(panelId, opts = {}) {
   panel.tabs.set(tabId, { term, fitAddon, serializeAddon, termEl, tabEl });
 
   setActiveTab(panelId, tabId);
-
-  if (opts.scrollback) term.write(opts.scrollback);
 
   await invoke('create_pty', { id: tabId, rows: term.rows, cols: term.cols })
     .catch((err) => term.writeln(`\x1b[31mFailed to start shell: ${err}\x1b[0m`));

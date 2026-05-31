@@ -66,19 +66,13 @@ async function restoreNode(node, container, sessionId) {
     const panel   = state.panels.get(panelId);
     if (node.flex) panel.el.style.flex = node.flex;
 
-    // Support both new format (tabs array) and old format (scrollback at root)
-    const tabs = node.tabs ?? [{ scrollback: node.scrollback ?? '' }];
-
-    // First tab already created by createPanel — restore its scrollback
-    const firstTabId = [...panel.tabs.keys()][0];
-    if (firstTabId && tabs[0]?.scrollback) panel.tabs.get(firstTabId).term.write(tabs[0].scrollback);
-
-    // Create additional tabs
-    for (let i = 1; i < tabs.length; i++) {
-      await addPanelTab(panelId, { scrollback: tabs[i]?.scrollback });
+    // Restore additional tabs as fresh shells (first already created by createPanel)
+    const tabCount = node.tabs?.length ?? 1;
+    for (let i = 1; i < tabCount; i++) {
+      await addPanelTab(panelId);
     }
 
-    // Restore active tab
+    // Restore active tab index
     const tabIds     = [...panel.tabs.keys()];
     const activeTabId = tabIds[node.activeTabIdx ?? 0];
     if (activeTabId) setActiveTab(panelId, activeTabId);
