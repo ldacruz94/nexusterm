@@ -7,7 +7,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { state } from './state.js';
 import { setActive, fitAll, initPanelDrag, splitActive, closePanel, focusDirection, setActiveTab, closeTab } from './panel.js';
 import { showShortcuts } from './shortcuts.js';
-import { createSession } from './sessions.js';
+import { createSession, deleteSession } from './sessions.js';
 
 const TERM_OPTIONS = {
   cursorBlink: true,
@@ -101,6 +101,10 @@ export async function addPanelTab(panelId) {
       const sel = term.getSelection();
       if (sel) { navigator.clipboard.writeText(sel); return false; }
       return true;
+    }
+    if (e.ctrlKey && !e.shiftKey && e.key === 'd') {
+      deleteSession(state.activeSessionId);
+      return false;
     }
     if (e.ctrlKey && e.shiftKey) {
       switch (e.key) {

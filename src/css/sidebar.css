@@ -81,6 +81,33 @@
   white-space: nowrap;
 }
 
+.session-item-delete {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.session-item:hover .session-item-delete {
+  display: flex;
+}
+
+.session-item-delete:hover {
+  background: rgba(247, 118, 142, 0.15);
+  color: #f7768e;
+}
+
 .session-item input {
   flex: 1;
   min-width: 0;

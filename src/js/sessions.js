@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { state } from './state.js';
 import { setActive, fitAll } from './panel.js';
 import { createPanel } from './terminal.js';
@@ -19,6 +20,13 @@ export function renderSessionItem(sessionId) {
   nameEl.className = 'session-item-name';
   nameEl.textContent = session.name;
   item.appendChild(nameEl);
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'session-item-delete';
+  deleteBtn.title = 'Delete session (Ctrl+D)';
+  deleteBtn.textContent = '×';
+  deleteBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteSession(sessionId); });
+  item.appendChild(deleteBtn);
 
   item.addEventListener('click', (e) => {
     if (e.target.tagName === 'INPUT') return;
@@ -92,5 +100,32 @@ export async function createSession(name) {
 
   await switchSession(id);
   await createPanel(el, id);
+  saveState();
+}
+
+export async function deleteSession(id) {
+  const session = state.sessions.get(id);
+  if (!session) return;
+
+  for (const [panelId, panel] of state.panels) {
+    if (panel.sessionId !== id) continue;
+    for (const [tabId, tab] of panel.tabs) {
+      tab.term.dispose();
+      invoke('kill_pty', { id: tabId }).catch(() => {});
+    }
+    state.panels.delete(panelId);
+  }
+
+  session.el.remove();
+  document.querySelector(`.session-item[data-session-id="${id}"]`)?.remove();
+  state.sessions.delete(id);
+
+  const remaining = [...state.sessions.keys()];
+  if (remaining.length > 0) {
+    await switchSession(remaining[remaining.length - 1]);
+  } else {
+    await createSession('Session 1');
+  }
+
   saveState();
 }
