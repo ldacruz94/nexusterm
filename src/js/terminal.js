@@ -7,7 +7,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { state } from './state.js';
 import { setActive, fitAll, initPanelDrag, splitActive, closePanel, focusDirection, setActiveTab, closeTab } from './panel.js';
 import { showShortcuts } from './shortcuts.js';
-import { createSession, deleteSession } from './sessions.js';
+import { createSession, deleteSession, showSessionBell } from './sessions.js';
 
 const TERM_OPTIONS = {
   cursorBlink: true,
@@ -80,6 +80,11 @@ export async function addPanelTab(panelId) {
   term.open(termEl);
 
   term.onTitleChange((title) => { if (title) tabTitle.textContent = title; });
+
+  term.onBell(() => {
+    const panel = state.panels.get(panelId);
+    if (panel) showSessionBell(panel.sessionId);
+  });
 
   termEl.addEventListener('paste', (e) => {
     const text = e.clipboardData?.getData('text/plain');

@@ -5,4 +5,5 @@ export const state = {
   activeSessionId: null,
   panelCounter:    0,
   sessionCounter:  0,
+  loading:         false,
 };

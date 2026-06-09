@@ -1,7 +1,7 @@
 import { listen } from '@tauri-apps/api/event';
 import { state } from './state.js';
 import { fitAll, splitActive, closePanel, closeTab } from './panel.js';
-import { createSession } from './sessions.js';
+import { createSession, notifySessionActivity } from './sessions.js';
 import { showShortcuts, hideShortcuts } from './shortcuts.js';
 import { appWindow, initWindowControls, initSidebarResize } from './window.js';
 import { saveState, loadState } from './persist.js';
@@ -10,7 +10,11 @@ await listen('pty-output', (event) => {
   const { id, data } = event.payload;
   for (const panel of state.panels.values()) {
     const tab = panel.tabs.get(id);
-    if (tab) { tab.term.write(data); return; }
+    if (tab) {
+      tab.term.write(data);
+      notifySessionActivity(panel.sessionId);
+      return;
+    }
   }
 });
 

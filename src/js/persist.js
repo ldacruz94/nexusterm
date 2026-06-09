@@ -98,6 +98,8 @@ export async function loadState() {
   try { saved = JSON.parse(raw); } catch { return false; }
   if (!saved?.sessions?.length) return false;
 
+  state.loading = true;
+
   // Advance counters so new sessions/panels don't reuse restored IDs
   for (const { id } of saved.sessions) {
     const n = parseInt(id.replace('session-', ''));
@@ -129,5 +131,6 @@ export async function loadState() {
     : state.sessions.keys().next().value;
 
   await switchSession(targetId);
+  state.loading = false;
   return true;
 }

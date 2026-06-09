@@ -81,6 +81,17 @@
   white-space: nowrap;
 }
 
+.session-item.has-activity {
+  background: rgba(122, 162, 247, 0.07);
+  color: var(--text);
+}
+
+.session-item.has-activity .session-item-name::before {
+  content: '* ';
+  color: var(--accent);
+  font-weight: 700;
+}
+
 .session-item-delete {
   display: none;
   align-items: center;

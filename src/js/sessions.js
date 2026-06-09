@@ -4,6 +4,33 @@ import { setActive, fitAll } from './panel.js';
 import { createPanel } from './terminal.js';
 import { saveState } from './persist.js';
 
+const bellTimers = new Map();
+
+export function notifySessionActivity(sessionId) {
+  if (state.loading) return;
+  if (sessionId === state.activeSessionId) return;
+  clearTimeout(bellTimers.get(sessionId));
+  bellTimers.set(sessionId, setTimeout(() => {
+    bellTimers.delete(sessionId);
+    showSessionBell(sessionId);
+  }, 500));
+}
+
+export function showSessionBell(sessionId) {
+  if (sessionId === state.activeSessionId) return;
+  document
+    .querySelector(`.session-item[data-session-id="${sessionId}"]`)
+    ?.classList.add('has-activity');
+}
+
+export function dismissSessionBell(sessionId) {
+  clearTimeout(bellTimers.get(sessionId));
+  bellTimers.delete(sessionId);
+  document
+    .querySelector(`.session-item[data-session-id="${sessionId}"]`)
+    ?.classList.remove('has-activity');
+}
+
 export function renderSessionItem(sessionId) {
   const session = state.sessions.get(sessionId);
 
@@ -73,6 +100,8 @@ export async function switchSession(id) {
   const session = state.sessions.get(id);
   session.el.style.display = 'flex';
   state.activeSessionId = id;
+
+  dismissSessionBell(id);
 
   document.querySelectorAll('.session-item').forEach((el) => el.classList.remove('active'));
   document.querySelector(`.session-item[data-session-id="${id}"]`)?.classList.add('active');
