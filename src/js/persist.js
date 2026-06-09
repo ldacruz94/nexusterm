@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { makeSplitter, setActiveTab } from './panel.js';
-import { createPanel, addPanelTab } from './terminal.js';
+import { createPanel, addPanelTab, getFontSize, restoreFontSize } from './terminal.js';
 import { renderSessionItem, switchSession } from './sessions.js';
 
 const STORAGE_KEY = 'nexusterm-state';
@@ -11,8 +11,8 @@ function serializeNode(el) {
   if (el.classList.contains('panel')) {
     const panelData = [...state.panels.values()].find((p) => p.el === el);
     const tabs = panelData
-      ? [...panelData.tabs.values()].map((t) => ({ scrollback: t.serializeAddon?.serialize() ?? '' }))
-      : [{ scrollback: '' }];
+      ? [...panelData.tabs.values()].map(() => ({}))
+      : [{}];
     const activeTabIdx = panelData
       ? Math.max(0, [...panelData.tabs.keys()].indexOf(panelData.activeTabId))
       : 0;
@@ -34,28 +34,17 @@ export function saveState() {
       : null,
   }));
 
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      sessions,
-      activeSessionId: state.activeSessionId,
-    }));
-  } catch {
-    // localStorage quota exceeded — save names/layout only (drop scrollback)
-    const slim = sessions.map((s) => ({
-      ...s,
-      tree: stripScrollback(s.tree),
-    }));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      sessions: slim,
-      activeSessionId: state.activeSessionId,
-    }));
-  }
-}
+  const payload = {
+    sessions,
+    activeSessionId: state.activeSessionId,
+    fontSize: getFontSize(),
+  };
 
-function stripScrollback(node) {
-  if (!node) return node;
-  if (node.type === 'panel') return { ...node, tabs: node.tabs?.map((t) => ({ ...t, scrollback: '' })) };
-  return { ...node, children: node.children.map(stripScrollback) };
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // ignore — layout is small, this shouldn't fail
+  }
 }
 
 // ── Restore ──────────────────────────────────────────────────────────────────
@@ -66,14 +55,14 @@ async function restoreNode(node, container, sessionId) {
     const panel   = state.panels.get(panelId);
     if (node.flex) panel.el.style.flex = node.flex;
 
-    // Restore additional tabs as fresh shells (first already created by createPanel)
+    // Restore additional tabs (first was already created by createPanel)
     const tabCount = node.tabs?.length ?? 1;
     for (let i = 1; i < tabCount; i++) {
       await addPanelTab(panelId);
     }
 
     // Restore active tab index
-    const tabIds     = [...panel.tabs.keys()];
+    const tabIds      = [...panel.tabs.keys()];
     const activeTabId = tabIds[node.activeTabIdx ?? 0];
     if (activeTabId) setActiveTab(panelId, activeTabId);
 
@@ -99,6 +88,8 @@ export async function loadState() {
   if (!saved?.sessions?.length) return false;
 
   state.loading = true;
+
+  if (saved.fontSize) restoreFontSize(saved.fontSize);
 
   // Advance counters so new sessions/panels don't reuse restored IDs
   for (const { id } of saved.sessions) {

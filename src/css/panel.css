@@ -133,6 +133,7 @@
 }
 
 .panel-tab-add,
+.panel-split-btn,
 .panel-drag-handle,
 .panel-close {
   display: flex;
@@ -149,6 +150,7 @@
 }
 
 .panel-tab-add:hover,
+.panel-split-btn:hover,
 .panel-drag-handle:hover { background: rgba(255,255,255,0.05); color: var(--text); }
 
 .panel-drag-handle       { cursor: grab; }
@@ -180,4 +182,23 @@
   background: rgba(122, 162, 247, 0.07);
   border-radius: 6px;
   z-index: 1000;
+}
+
+.browser-url-bar {
+  flex: 1;
+  height: 22px;
+  margin: 0 8px;
+  padding: 0 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  min-width: 0;
+}
+
+.browser-url-bar:focus {
+  border-color: var(--accent);
 }

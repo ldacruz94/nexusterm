@@ -2,6 +2,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { state } from './state.js';
 import { createPanel, addPanelTab } from './terminal.js';
 import { saveState } from './persist.js';
+import { syncAllBrowserBounds, closeBrowser } from './browser.js';
+import { markTabRead } from './notifications.js';
 
 export function setActive(id) {
   document.querySelectorAll('.panel').forEach((el) => el.classList.remove('active'));
@@ -28,6 +30,7 @@ export function setActiveTab(panelId, tabId) {
   tab.termEl.style.display = '';
   tab.tabEl.classList.add('active');
   panel.activeTabId = tabId;
+  markTabRead(tabId);
   tab.fitAddon.fit();
 }
 
@@ -66,6 +69,7 @@ export function fitAll() {
   for (const [, panel] of state.panels) {
     if (panel.sessionId === state.activeSessionId) panel.fitAddon?.fit();
   }
+  syncAllBrowserBounds();
 }
 
 export function swapPanelElements(el1, el2) {
@@ -346,6 +350,7 @@ export async function closeTab(panelId, tabId, { force = false } = {}) {
   tab.termEl.remove();
   tab.tabEl.remove();
   panel.tabs.delete(tabId);
+  markTabRead(tabId);
   invoke('kill_pty', { id: tabId }).catch(() => {});
 
   if (!force) saveState();
@@ -366,6 +371,7 @@ export async function closePanel(id, { force = false } = {}) {
     tab.term.dispose();
     invoke('kill_pty', { id: tabId }).catch(() => {});
   }
+  closeBrowser(id);
   state.panels.delete(id);
 
   const prevSib = el.previousElementSibling;

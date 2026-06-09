@@ -8,10 +8,36 @@ import { state } from './state.js';
 import { setActive, fitAll, initPanelDrag, splitActive, closePanel, focusDirection, setActiveTab, closeTab } from './panel.js';
 import { showShortcuts } from './shortcuts.js';
 import { createSession, deleteSession, showSessionBell } from './sessions.js';
+import { openBrowser } from './browser.js';
+
+const DEFAULT_FONT_SIZE = 14;
+let currentFontSize = DEFAULT_FONT_SIZE;
+
+export function setFontSize(delta) {
+  if (delta === 0) {
+    currentFontSize = DEFAULT_FONT_SIZE;
+  } else {
+    currentFontSize = Math.min(32, Math.max(8, currentFontSize + delta));
+  }
+  for (const panel of state.panels.values()) {
+    for (const tab of panel.tabs.values()) {
+      tab.term.options.fontSize = currentFontSize;
+    }
+  }
+  fitAll();
+}
+
+export function getFontSize() { return currentFontSize; }
+
+// Sets font size without updating existing terminals — called during restore
+// before any terminals exist so the value is picked up by new Terminal().
+export function restoreFontSize(size) {
+  currentFontSize = Math.min(32, Math.max(8, size));
+}
 
 const TERM_OPTIONS = {
   cursorBlink: true,
-  fontSize: 14,
+  fontSize: DEFAULT_FONT_SIZE,
   fontFamily: '"JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, monospace',
   scrollback: 10_000,
   theme: {
@@ -71,13 +97,19 @@ export async function addPanelTab(panelId) {
   panel.contentEl.appendChild(termEl);
 
   // Terminal instance
-  const term          = new Terminal(TERM_OPTIONS);
+  const term          = new Terminal({ ...TERM_OPTIONS, fontSize: currentFontSize });
   const fitAddon      = new FitAddon();
   const serializeAddon = new SerializeAddon();
   term.loadAddon(fitAddon);
   term.loadAddon(serializeAddon);
   term.loadAddon(new WebLinksAddon());
   term.open(termEl);
+
+  termEl.addEventListener('wheel', (e) => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    setFontSize(e.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
 
   term.onTitleChange((title) => { if (title) tabTitle.textContent = title; });
 
@@ -94,11 +126,18 @@ export async function addPanelTab(panelId) {
   term.attachCustomKeyEventHandler((e) => {
     if (e.type !== 'keydown') return true;
     if (e.ctrlKey && !e.shiftKey && e.key === '/') { e.preventDefault(); showShortcuts(); return false; }
+    if (e.ctrlKey && !e.shiftKey && (e.key === '=' || e.key === '+')) { e.preventDefault(); setFontSize(1);  return false; }
+    if (e.ctrlKey && !e.shiftKey && e.key === '-')                    { e.preventDefault(); setFontSize(-1); return false; }
+    if (e.ctrlKey && !e.shiftKey && e.key === '0')                    { e.preventDefault(); setFontSize(0);  return false; }
     if (e.ctrlKey && !e.shiftKey && e.key === 'v') {
       navigator.clipboard.readText().then((text) => { if (text) term.paste(text); });
       return false;
     }
     if (!e.ctrlKey && !e.altKey && e.shiftKey && e.key === 'Enter') {
+      invoke('write_to_pty', { id: tabId, data: '\x1b[13;2u' });
+      return false;
+    }
+    if (e.ctrlKey && !e.shiftKey && e.key === 'Enter') {
       invoke('write_to_pty', { id: tabId, data: '\n' });
       return false;
     }
@@ -165,18 +204,44 @@ export async function createPanel(container, sessionId) {
   addBtn.addEventListener('click', (e) => { e.stopPropagation(); addPanelTab(panelId); });
   actions.appendChild(addBtn);
 
+  const splitHBtn = document.createElement('button');
+  splitHBtn.className = 'panel-split-btn';
+  splitHBtn.title = 'Split right (Ctrl+Shift+D)';
+  splitHBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="1" y="1" width="5" height="12" rx="1" fill="currentColor" opacity="0.5"/>
+    <rect x="8" y="1" width="5" height="12" rx="1" fill="currentColor"/>
+  </svg>`;
+  splitHBtn.addEventListener('click', (e) => { e.stopPropagation(); splitActive('horizontal'); });
+  actions.appendChild(splitHBtn);
+
+  const splitVBtn = document.createElement('button');
+  splitVBtn.className = 'panel-split-btn';
+  splitVBtn.title = 'Split down (Ctrl+Shift+E)';
+  splitVBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="1" y="1" width="12" height="5" rx="1" fill="currentColor" opacity="0.5"/>
+    <rect x="1" y="8" width="12" height="5" rx="1" fill="currentColor"/>
+  </svg>`;
+  splitVBtn.addEventListener('click', (e) => { e.stopPropagation(); splitActive('vertical'); });
+  actions.appendChild(splitVBtn);
+
+  const browserBtn = document.createElement('button');
+  browserBtn.className = 'panel-split-btn';
+  browserBtn.title = 'Open browser';
+  browserBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/>
+    <ellipse cx="7" cy="7" rx="2.2" ry="5.5" stroke="currentColor" stroke-width="1.2"/>
+    <line x1="1.5" y1="7" x2="12.5" y2="7" stroke="currentColor" stroke-width="1.2"/>
+    <line x1="2.5" y1="4" x2="11.5" y2="4" stroke="currentColor" stroke-width="1.2"/>
+    <line x1="2.5" y1="10" x2="11.5" y2="10" stroke="currentColor" stroke-width="1.2"/>
+  </svg>`;
+  browserBtn.addEventListener('click', (e) => { e.stopPropagation(); openBrowser(panelId); });
+  actions.appendChild(browserBtn);
+
   const dragHandle = document.createElement('div');
   dragHandle.className = 'panel-drag-handle';
   dragHandle.textContent = '⠿';
   dragHandle.title = 'Drag to swap';
   actions.appendChild(dragHandle);
-
-  const closeBtn = document.createElement('button');
-  closeBtn.className = 'panel-close';
-  closeBtn.textContent = '×';
-  closeBtn.title = 'Close pane';
-  closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closePanel(panelId); });
-  actions.appendChild(closeBtn);
 
   tabbar.appendChild(actions);
   el.appendChild(tabbar);

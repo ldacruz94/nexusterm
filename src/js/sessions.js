@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { setActive, fitAll } from './panel.js';
 import { createPanel } from './terminal.js';
 import { saveState } from './persist.js';
+import { hideBrowsersForSession, showBrowsersForSession } from './browser.js';
 
 const bellTimers = new Map();
 
@@ -95,6 +96,9 @@ export function startRename(sessionId, item, nameEl) {
 }
 
 export async function switchSession(id) {
+  const prevId = state.activeSessionId;
+  if (prevId && prevId !== id) hideBrowsersForSession(prevId);
+
   for (const { el } of state.sessions.values()) el.style.display = 'none';
 
   const session = state.sessions.get(id);
@@ -115,6 +119,7 @@ export async function switchSession(id) {
   }
 
   fitAll();
+  showBrowsersForSession(id);
 }
 
 export async function createSession(name) {
@@ -124,7 +129,7 @@ export async function createSession(name) {
   el.className = 'session-panels';
   document.getElementById('main').appendChild(el);
 
-  state.sessions.set(id, { name: name ?? `Session ${state.sessionCounter}`, el, activePanelId: null });
+  state.sessions.set(id, { name: name ?? 'Terminal', el, activePanelId: null });
   renderSessionItem(id);
 
   await switchSession(id);
@@ -153,7 +158,7 @@ export async function deleteSession(id) {
   if (remaining.length > 0) {
     await switchSession(remaining[remaining.length - 1]);
   } else {
-    await createSession('Session 1');
+    await createSession('Terminal');
   }
 
   saveState();

@@ -1,5 +1,6 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { fitAll } from './panel.js';
+import { syncAllBrowserBounds } from './browser.js';
 
 export const appWindow = getCurrentWindow();
 
@@ -8,6 +9,15 @@ async function syncMaximized() {
 }
 
 export async function initWindowControls() {
+  document.getElementById('btn-toggle-sidebar').addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    document.getElementById('app').classList.toggle('sidebar-hidden');
+    sidebar.addEventListener('transitionend', () => {
+      fitAll();
+      syncAllBrowserBounds();
+    }, { once: true });
+  });
+
   document.getElementById('btn-minimize').addEventListener('click', () => appWindow.minimize());
   document.getElementById('btn-maximize').addEventListener('click', async () => {
     document.body.classList.add('maximizing');
@@ -15,8 +25,17 @@ export async function initWindowControls() {
   });
   document.getElementById('btn-close').addEventListener('click', () => appWindow.close());
 
+  let lastTitlebarClick = 0;
   document.getElementById('titlebar').addEventListener('mousedown', (e) => {
-    if (e.button === 0 && !e.target.closest('button')) appWindow.startDragging();
+    if (e.button !== 0 || e.target.closest('button')) return;
+    const now = Date.now();
+    if (now - lastTitlebarClick < 300) {
+      document.body.classList.add('maximizing');
+      appWindow.toggleMaximize();
+    } else {
+      appWindow.startDragging();
+    }
+    lastTitlebarClick = now;
   });
 
   let fitDebounce;
@@ -37,6 +56,7 @@ export function initSidebarResize() {
 
   sidebarResizer.addEventListener('mousedown', (e) => {
     e.preventDefault();
+    sidebar.classList.add('no-transition');
     sidebarResizer.classList.add('dragging');
     document.body.style.cursor     = 'col-resize';
     document.body.style.userSelect = 'none';
@@ -50,6 +70,7 @@ export function initSidebarResize() {
     };
 
     const onUp = () => {
+      sidebar.classList.remove('no-transition');
       sidebarResizer.classList.remove('dragging');
       document.body.style.cursor     = '';
       document.body.style.userSelect = '';

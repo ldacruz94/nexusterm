@@ -8,11 +8,17 @@
   </head>
   <body>
     <div id="titlebar">
-      <span class="brand">Nexus<span class="brand-accent">Term</span></span>
-      <div class="titlebar-actions">
-        <button id="btn-split-h" title="Split right (Ctrl+Shift+D)">&#124; Split</button>
-        <button id="btn-split-v" title="Split down (Ctrl+Shift+E)">— Split</button>
-        <button id="btn-help" title="Shortcuts (Ctrl+/)">?</button>
+      <div id="sidebar-controls">
+        <button id="btn-toggle-sidebar" title="Toggle sidebar">&#9776;</button>
+        <button id="btn-new-session" title="New session">+</button>
+        <button id="btn-bell" title="Notifications">
+          <svg width="13" height="14" viewBox="0 0 13 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="6.5" y1="0.5" x2="6.5" y2="1.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M3 5.5C3 3.6 4.6 2 6.5 2S10 3.6 10 5.5V9H3V5.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+            <path d="M5 9a1.5 1.5 0 0 0 3 0" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <span id="bell-badge"></span>
+        </button>
       </div>
       <div class="window-controls">
         <button id="btn-minimize" title="Minimize">&#8212;</button>
@@ -23,11 +29,10 @@
 
     <div id="app">
       <div id="sidebar">
-        <div class="sidebar-header">
-          <span>Sessions</span>
-          <button id="btn-new-session" title="New session">+</button>
-        </div>
         <div id="session-list"></div>
+        <div id="sidebar-footer">
+          <button id="btn-help" title="Shortcuts (Ctrl+/)">?</button>
+        </div>
       </div>
       <div id="sidebar-resizer"></div>
       <div id="main"></div>
@@ -70,6 +75,44 @@
         </table>
       </div>
     </dialog>
+
+    <div id="statusbar">
+      <div class="stat-item">
+        <span class="stat-label">CPU</span>
+        <span class="stat-value" id="stat-cpu">—</span>
+        <canvas id="spark-cpu" class="sparkline" width="60" height="16"></canvas>
+      </div>
+      <div class="stat-separator"></div>
+      <div class="stat-item">
+        <span class="stat-label">RAM</span>
+        <span class="stat-value" id="stat-mem">—</span>
+        <canvas id="spark-mem" class="sparkline" width="60" height="16"></canvas>
+      </div>
+      <div class="stat-separator"></div>
+      <div class="stat-item">
+        <span class="stat-label">↓</span>
+        <span class="stat-value" id="stat-net-down">—</span>
+        <canvas id="spark-net-down" class="sparkline" width="50" height="16"></canvas>
+        <span class="stat-label" style="margin-left:10px">↑</span>
+        <span class="stat-value" id="stat-net-up">—</span>
+        <canvas id="spark-net-up" class="sparkline" width="50" height="16"></canvas>
+      </div>
+      <div class="stat-separator"></div>
+      <div class="stat-item">
+        <span class="stat-label">R</span>
+        <span class="stat-value" id="stat-disk-read">—</span>
+        <canvas id="spark-disk-read" class="sparkline" width="50" height="16"></canvas>
+        <span class="stat-label" style="margin-left:10px">W</span>
+        <span class="stat-value" id="stat-disk-write">—</span>
+        <canvas id="spark-disk-write" class="sparkline" width="50" height="16"></canvas>
+      </div>
+      <div class="stat-separator"></div>
+      <div class="stat-item">
+        <span class="stat-label">LOAD</span>
+        <span class="stat-value" id="stat-load" style="min-width:12ch">—</span>
+        <canvas id="spark-load" class="sparkline" width="50" height="16"></canvas>
+      </div>
+    </div>
 
     <script type="module" src="/src/js/main.js"></script>
   </body>
