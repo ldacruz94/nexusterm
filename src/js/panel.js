@@ -84,6 +84,84 @@ export function swapPanelElements(el1, el2) {
   placeholder.remove();
 }
 
+const ZONE_CLASSES    = ['drag-over-left', 'drag-over-right', 'drag-over-top', 'drag-over-bottom', 'drag-over-center'];
+const SESSION_CLASSES = ['session-drop-top', 'session-drop-bottom'];
+
+function getDropZone(el, cx, cy) {
+  const r    = el.getBoundingClientRect();
+  const x    = (cx - r.left) / r.width;
+  const y    = (cy - r.top)  / r.height;
+  const EDGE = 0.25;
+  if (x < EDGE)     return 'left';
+  if (x > 1 - EDGE) return 'right';
+  if (y < EDGE)     return 'top';
+  if (y > 1 - EDGE) return 'bottom';
+  return 'center';
+}
+
+function extractPanel(panelEl) {
+  const parent = panelEl.parentElement;
+  const prev   = panelEl.previousElementSibling;
+  const next   = panelEl.nextElementSibling;
+
+  panelEl.remove();
+
+  if (prev?.classList.contains('splitter'))      prev.remove();
+  else if (next?.classList.contains('splitter')) next.remove();
+
+  if (parent.classList.contains('split-h') || parent.classList.contains('split-v')) {
+    if (parent.children.length === 1) {
+      const child = parent.children[0];
+      child.style.flex = '';
+      parent.replaceWith(child);
+    }
+  }
+}
+
+function insertPanelRelativeTo(panelEl, targetEl, zone) {
+  panelEl.style.flex = '';
+  extractPanel(panelEl);
+
+  if (zone === 'left' || zone === 'right') {
+    const splitEl     = document.createElement('div');
+    splitEl.className = 'split-h';
+
+    targetEl.style.flex = '';
+    targetEl.replaceWith(splitEl);
+
+    if (zone === 'left') {
+      splitEl.appendChild(panelEl);
+      splitEl.appendChild(makeSplitter());
+      splitEl.appendChild(targetEl);
+    } else {
+      splitEl.appendChild(targetEl);
+      splitEl.appendChild(makeSplitter());
+      splitEl.appendChild(panelEl);
+    }
+  } else {
+    // top/bottom: insert as full-width row at the session root level
+    const sessionRoot = targetEl.closest('.session-panels');
+    if (!sessionRoot) return;
+
+    const rootContent      = sessionRoot.firstElementChild;
+    rootContent.style.flex = '';
+
+    const splitEl          = document.createElement('div');
+    splitEl.className      = 'split-v';
+    rootContent.replaceWith(splitEl);
+
+    if (zone === 'top') {
+      splitEl.appendChild(panelEl);
+      splitEl.appendChild(makeSplitter());
+      splitEl.appendChild(rootContent);
+    } else {
+      splitEl.appendChild(rootContent);
+      splitEl.appendChild(makeSplitter());
+      splitEl.appendChild(panelEl);
+    }
+  }
+}
+
 export function initPanelDrag(panelEl) {
   const handle = panelEl.querySelector('.panel-drag-handle');
 
@@ -107,7 +185,16 @@ export function initPanelDrag(panelEl) {
 
     const offsetX = e.clientX - rect.left;
     const offsetY = e.clientY - rect.top;
-    let dropTarget = null;
+    let dropTarget    = null;
+    let dropZone      = null;
+    let sessionDropEl = null;
+
+    const clearDrop = () => {
+      dropTarget?.classList.remove(...ZONE_CLASSES);
+      sessionDropEl?.classList.remove(...SESSION_CLASSES);
+      sessionDropEl = null;
+      // dropZone is intentionally NOT cleared here — managed explicitly in onMove/onUp
+    };
 
     const onMove = (ev) => {
       ghost.style.left = `${ev.clientX - offsetX}px`;
@@ -117,24 +204,50 @@ export function initPanelDrag(panelEl) {
       const under = document.elementFromPoint(ev.clientX, ev.clientY);
       ghost.style.visibility = '';
 
-      const hovered = under?.closest('.panel');
-      if (dropTarget) dropTarget.classList.remove('drag-over');
-      dropTarget = (hovered && hovered !== panelEl) ? hovered : null;
-      if (dropTarget) dropTarget.classList.add('drag-over');
+      const hovered   = under?.closest('.panel');
+      const newTarget = (hovered && hovered !== panelEl) ? hovered : null;
+
+      if (newTarget !== dropTarget) {
+        clearDrop();
+        dropTarget = newTarget;
+        dropZone   = null;
+      }
+
+      if (dropTarget) {
+        clearDrop();
+        dropZone = getDropZone(dropTarget, ev.clientX, ev.clientY);
+        dropTarget.classList.add(`drag-over-${dropZone}`);
+
+        if (dropZone === 'top' || dropZone === 'bottom') {
+          sessionDropEl = dropTarget.closest('.session-panels');
+          sessionDropEl?.classList.add(`session-drop-${dropZone}`);
+        }
+      }
     };
 
     const onUp = () => {
       ghost.remove();
       panelEl.classList.remove('dragging');
-      if (dropTarget) dropTarget.classList.remove('drag-over');
+
+      const target = dropTarget;
+      const zone   = dropZone;
+      clearDrop();
+      dropTarget = null;
+      dropZone   = null;
+
       document.body.style.cursor     = '';
       document.body.style.userSelect = '';
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup',   onUp);
 
-      if (dropTarget) {
-        swapPanelElements(panelEl, dropTarget);
+      if (target && zone) {
+        if (zone === 'center') {
+          swapPanelElements(panelEl, target);
+        } else {
+          insertPanelRelativeTo(panelEl, target, zone);
+        }
         fitAll();
+        saveState();
       }
     };
 

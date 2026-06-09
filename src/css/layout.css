@@ -55,3 +55,19 @@
 .splitter.dragging {
   background: var(--accent);
 }
+
+.session-panels.session-drop-top::before,
+.session-panels.session-drop-bottom::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  z-index: 100;
+  pointer-events: none;
+}
+
+.session-panels.session-drop-top::before    { top: 0; }
+.session-panels.session-drop-bottom::before { bottom: 0; }

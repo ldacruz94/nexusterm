@@ -12,8 +12,27 @@
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
-.panel.dragging  { opacity: 0.35; }
-.panel.drag-over { box-shadow: inset 0 0 0 2px var(--accent) !important; }
+.panel.dragging { opacity: 0.35; }
+
+.panel.drag-over-center { box-shadow: inset 0 0 0 2px var(--accent) !important; }
+
+.panel.drag-over-left::before,
+.panel.drag-over-right::before,
+.panel.drag-over-top::before,
+.panel.drag-over-bottom::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(122, 162, 247, 0.18);
+  border: 2px solid var(--accent);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.panel.drag-over-left::before   { right:  50%; }
+.panel.drag-over-right::before  { left:   50%; }
+.panel.drag-over-top::before    { bottom: 50%; }
+.panel.drag-over-bottom::before { top:    50%; }
 
 /* ── Tabbar ─────────────────────────────────────────────────────────────── */
 
