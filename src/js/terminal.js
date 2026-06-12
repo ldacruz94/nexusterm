@@ -8,6 +8,7 @@ import { state } from './state.js';
 import { setActive, fitAll, initPanelDrag, splitActive, closePanel, focusDirection, setActiveTab, closeTab } from './panel.js';
 import { showShortcuts } from './shortcuts.js';
 import { createSession, deleteSession, showSessionBell } from './sessions.js';
+import { modKey, modLabel } from './platform.js';
 
 const DEFAULT_FONT_SIZE = 14;
 let currentFontSize = DEFAULT_FONT_SIZE;
@@ -124,11 +125,12 @@ export async function addPanelTab(panelId) {
 
   term.attachCustomKeyEventHandler((e) => {
     if (e.type !== 'keydown') return true;
-    if (e.ctrlKey && !e.shiftKey && e.key === '/') { e.preventDefault(); showShortcuts(); return false; }
-    if (e.ctrlKey && !e.shiftKey && (e.key === '=' || e.key === '+')) { e.preventDefault(); setFontSize(1);  return false; }
-    if (e.ctrlKey && !e.shiftKey && e.key === '-')                    { e.preventDefault(); setFontSize(-1); return false; }
-    if (e.ctrlKey && !e.shiftKey && e.key === '0')                    { e.preventDefault(); setFontSize(0);  return false; }
-    if (e.ctrlKey && !e.shiftKey && e.key === 'v') {
+    const mod = e[modKey];
+    if (mod && !e.shiftKey && e.key === '/') { e.preventDefault(); showShortcuts(); return false; }
+    if (mod && !e.shiftKey && (e.key === '=' || e.key === '+')) { e.preventDefault(); setFontSize(1);  return false; }
+    if (mod && !e.shiftKey && e.key === '-')                    { e.preventDefault(); setFontSize(-1); return false; }
+    if (mod && !e.shiftKey && e.key === '0')                    { e.preventDefault(); setFontSize(0);  return false; }
+    if (mod && !e.shiftKey && e.key === 'v') {
       navigator.clipboard.readText().then((text) => { if (text) term.paste(text); });
       return false;
     }
@@ -140,16 +142,16 @@ export async function addPanelTab(panelId) {
       invoke('write_to_pty', { id: tabId, data: '\n' });
       return false;
     }
-    if (e.ctrlKey && !e.shiftKey && e.key === 'c') {
+    if (mod && !e.shiftKey && e.key === 'c') {
       const sel = term.getSelection();
       if (sel) { navigator.clipboard.writeText(sel); return false; }
       return true;
     }
-    if (e.ctrlKey && !e.shiftKey && e.key === 'd') {
+    if (mod && !e.shiftKey && e.key === 'd') {
       deleteSession(state.activeSessionId);
       return false;
     }
-    if (e.ctrlKey && e.shiftKey) {
+    if (mod && e.shiftKey) {
       switch (e.key) {
         case 'D':          splitActive('horizontal');        return false;
         case 'E':          splitActive('vertical');          return false;
@@ -198,14 +200,14 @@ export async function createPanel(container, sessionId) {
 
   const addBtn = document.createElement('button');
   addBtn.className = 'panel-tab-add';
-  addBtn.title = 'New tab (Ctrl+Shift+T)';
+  addBtn.title = `New tab (${modLabel}+Shift+T)`;
   addBtn.textContent = '+';
   addBtn.addEventListener('click', (e) => { e.stopPropagation(); addPanelTab(panelId); });
   actions.appendChild(addBtn);
 
   const splitHBtn = document.createElement('button');
   splitHBtn.className = 'panel-split-btn';
-  splitHBtn.title = 'Split right (Ctrl+Shift+D)';
+  splitHBtn.title = `Split right (${modLabel}+Shift+D)`;
   splitHBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="1" y="1" width="5" height="12" rx="1" fill="currentColor" opacity="0.5"/>
     <rect x="8" y="1" width="5" height="12" rx="1" fill="currentColor"/>
@@ -215,7 +217,7 @@ export async function createPanel(container, sessionId) {
 
   const splitVBtn = document.createElement('button');
   splitVBtn.className = 'panel-split-btn';
-  splitVBtn.title = 'Split down (Ctrl+Shift+E)';
+  splitVBtn.title = `Split down (${modLabel}+Shift+E)`;
   splitVBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="1" y="1" width="12" height="5" rx="1" fill="currentColor" opacity="0.5"/>
     <rect x="1" y="8" width="12" height="5" rx="1" fill="currentColor"/>

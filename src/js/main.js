@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { fitAll, closePanel, closeTab } from './panel.js';
 import { createSession, notifySessionActivity } from './sessions.js';
 import { showShortcuts, hideShortcuts } from './shortcuts.js';
+import { modLabel } from './platform.js';
 import { appWindow, initWindowControls, initSidebarResize } from './window.js';
 import { saveState, loadState } from './persist.js';
 import { markTabUnread, markTabRead, clearBell, initBell } from './notifications.js';
@@ -44,7 +45,9 @@ await listen('pty-exited', (event) => {
   }
 });
 
-document.getElementById('btn-help').addEventListener('click', showShortcuts);
+const btnHelp = document.getElementById('btn-help');
+btnHelp.title = `Shortcuts (${modLabel}+/)`;
+btnHelp.addEventListener('click', showShortcuts);
 document.getElementById('btn-shortcuts-close').addEventListener('click', hideShortcuts);
 document.getElementById('btn-new-session').addEventListener('click', () => createSession());
 

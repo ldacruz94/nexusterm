@@ -4,6 +4,7 @@ import { setActive, fitAll } from './panel.js';
 import { createPanel } from './terminal.js';
 import { saveState } from './persist.js';
 import { hideBrowsersForSession, showBrowsersForSession } from './browser.js';
+import { modLabel } from './platform.js';
 
 const bellTimers = new Map();
 
@@ -51,7 +52,7 @@ export function renderSessionItem(sessionId) {
 
   const deleteBtn = document.createElement('button');
   deleteBtn.className = 'session-item-delete';
-  deleteBtn.title = 'Delete session (Ctrl+D)';
+  deleteBtn.title = `Delete session (${modLabel}+D)`;
   deleteBtn.textContent = '×';
   deleteBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteSession(sessionId); });
   item.appendChild(deleteBtn);
