@@ -8,7 +8,6 @@ import { state } from './state.js';
 import { setActive, fitAll, initPanelDrag, splitActive, closePanel, focusDirection, setActiveTab, closeTab } from './panel.js';
 import { showShortcuts } from './shortcuts.js';
 import { createSession, deleteSession, showSessionBell } from './sessions.js';
-import { openBrowser } from './browser.js';
 
 const DEFAULT_FONT_SIZE = 14;
 let currentFontSize = DEFAULT_FONT_SIZE;
@@ -223,19 +222,6 @@ export async function createPanel(container, sessionId) {
   </svg>`;
   splitVBtn.addEventListener('click', (e) => { e.stopPropagation(); splitActive('vertical'); });
   actions.appendChild(splitVBtn);
-
-  const browserBtn = document.createElement('button');
-  browserBtn.className = 'panel-split-btn';
-  browserBtn.title = 'Open browser';
-  browserBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/>
-    <ellipse cx="7" cy="7" rx="2.2" ry="5.5" stroke="currentColor" stroke-width="1.2"/>
-    <line x1="1.5" y1="7" x2="12.5" y2="7" stroke="currentColor" stroke-width="1.2"/>
-    <line x1="2.5" y1="4" x2="11.5" y2="4" stroke="currentColor" stroke-width="1.2"/>
-    <line x1="2.5" y1="10" x2="11.5" y2="10" stroke="currentColor" stroke-width="1.2"/>
-  </svg>`;
-  browserBtn.addEventListener('click', (e) => { e.stopPropagation(); openBrowser(panelId); });
-  actions.appendChild(browserBtn);
 
   const dragHandle = document.createElement('div');
   dragHandle.className = 'panel-drag-handle';
